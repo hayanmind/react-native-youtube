@@ -8,15 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/inProgress-team/react-native-youtube.git"
+    "url": "git+https://github.com/hayanmind/react-native-youtube.git"
   },
   "keywords": ["youtube", "react", "react-native"],
   "author": "Param Aggarwal",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/inProgress-team/react-native-youtube/issues"
+    "url": "https://github.com/hayanmind/react-native-youtube/issues"
   },
-  "homepage": "https://github.com/inProgress-team/react-native-youtube#readme",
+  "homepage": "https://github.com/hayanmind/react-native-youtube#readme",
   "dependencies": {
     "prop-types": "^15.5.0"
   },
