@@ -157,6 +157,14 @@ public class YouTubePlayerController implements
         mYouTubeView.receivedError(errorReason.toString());
     }
 
+    public void play() {
+        mYouTubePlayer.play();
+    }
+
+    public void pause() {
+        mYouTubePlayer.pause();
+    }
+
     public void seekTo(float second) {
         if (isLoaded()) mYouTubePlayer.seekToMillis((int)(second * 1000));
     }

@@ -125,6 +125,14 @@ export default class YouTube extends React.Component {
     if (this.props.onChangeFullscreen) this.props.onChangeFullscreen(event.nativeEvent);
   };
 
+  play() {
+    NativeModules.YouTubeModule.play(ReactNative.findNodeHandle(this._nativeComponentRef));
+  }
+
+  pause() {
+    NativeModules.YouTubeModule.pause(ReactNative.findNodeHandle(this._nativeComponentRef));
+  }
+
   seekTo(seconds) {
     UIManager.dispatchViewManagerCommand(
       ReactNative.findNodeHandle(this._nativeComponentRef),

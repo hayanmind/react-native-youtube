@@ -27,6 +27,28 @@ public class YouTubeModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void play(final int reactTag) {
+        UIManagerModule uiManager = mReactContext.getNativeModule(UIManagerModule.class);
+        uiManager.addUIBlock(new UIBlock() {
+            public void execute (NativeViewHierarchyManager nvhm) {
+                YouTubeView youTubeView = (YouTubeView) nvhm.resolveView(reactTag);
+                youTubeView.play();
+            }
+        });
+    }
+
+    @ReactMethod
+    public void pause(final int reactTag) {
+        UIManagerModule uiManager = mReactContext.getNativeModule(UIManagerModule.class);
+        uiManager.addUIBlock(new UIBlock() {
+            public void execute (NativeViewHierarchyManager nvhm) {
+                YouTubeView youTubeView = (YouTubeView) nvhm.resolveView(reactTag);
+                youTubeView.pause();
+            }
+        });
+    }
+
+    @ReactMethod
     public void videosIndex(final int reactTag, final Promise promise) {
         try {
             UIManagerModule uiManager = mReactContext.getNativeModule(UIManagerModule.class);
