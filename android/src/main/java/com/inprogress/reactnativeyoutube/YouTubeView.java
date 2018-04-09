@@ -73,6 +73,14 @@ public class YouTubeView extends FrameLayout {
         super.onDetachedFromWindow();
     }
 
+    public void play() {
+        mYouTubeController.play();
+    }
+
+    public void pause() {
+        mYouTubeController.pause();
+    }
+
     public void seekTo(float second) {
         mYouTubeController.seekTo(second);
     }

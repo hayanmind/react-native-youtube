@@ -108,7 +108,8 @@ NSString static *const kYTPlayerSyndicationRegexPattern = @"^https://tpc.googles
 }
 
 - (void)pauseVideo {
-  [self notifyDelegateOfYouTubeCallbackUrl:[NSURL URLWithString:[NSString stringWithFormat:@"ytplayer://onStateChange?data=%@", kYTPlayerStatePausedCode]]];
+  // DH: This is raised fake pause event.
+  // [self notifyDelegateOfYouTubeCallbackUrl:[NSURL URLWithString:[NSString stringWithFormat:@"ytplayer://onStateChange?data=%@", kYTPlayerStatePausedCode]]];
   [self stringFromEvaluatingJavaScript:@"player.pauseVideo();"];
 }
 
