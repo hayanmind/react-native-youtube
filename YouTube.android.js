@@ -133,6 +133,22 @@ export default class YouTube extends React.Component {
     NativeModules.YouTubeModule.pause(ReactNative.findNodeHandle(this._nativeComponentRef));
   }
 
+  playAndPauseAt(endTimeInSec, periodInSec) {
+    return new Promise((resolve, reject) =>
+      NativeModules.YouTubeModule.playAndPauseAt(
+        ReactNative.findNodeHandle(this._nativeComponentRef),
+        parseFloat(endTimeInSec, 10),
+        parseFloat(periodInSec, 10),
+      )
+        .then(() => resolve())
+        .catch(errorMessage => reject(errorMessage)),
+    );
+  }
+
+  cancelPlayAndPauseAt() {
+    NativeModules.YouTubeModule.cancelPlayAndPauseAt(ReactNative.findNodeHandle(this._nativeComponentRef));
+  }
+
   seekTo(seconds) {
     UIManager.dispatchViewManagerCommand(
       ReactNative.findNodeHandle(this._nativeComponentRef),

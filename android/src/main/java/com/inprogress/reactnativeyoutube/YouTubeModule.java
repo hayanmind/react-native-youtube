@@ -9,12 +9,19 @@ import com.facebook.react.uimanager.NativeViewHierarchyManager;
 import com.facebook.react.uimanager.UIBlock;
 import com.facebook.react.uimanager.UIManagerModule;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+
 
 public class YouTubeModule extends ReactContextBaseJavaModule {
 
     private static final String E_MODULE_ERROR = "E_MODULE_ERROR";
 
     private ReactApplicationContext mReactContext;
+
+    private Map<Integer, Timer> reactTagToTimerForPolling = new HashMap<Integer, Timer>();
 
     public YouTubeModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -43,6 +50,56 @@ public class YouTubeModule extends ReactContextBaseJavaModule {
         uiManager.addUIBlock(new UIBlock() {
             public void execute (NativeViewHierarchyManager nvhm) {
                 YouTubeView youTubeView = (YouTubeView) nvhm.resolveView(reactTag);
+                youTubeView.pause();
+            }
+        });
+    }
+
+    @ReactMethod
+    public void playAndPauseAt(final int reactTag, final float endTimeInSec, final float periodInSec, final Promise promise) {
+        try {
+            UIManagerModule uiManager = mReactContext.getNativeModule(UIManagerModule.class);
+            uiManager.addUIBlock(new UIBlock() {
+                public void execute (NativeViewHierarchyManager nvhm) {
+                    final YouTubeView youTubeView = (YouTubeView) nvhm.resolveView(reactTag);
+
+                    final Timer timerForPolling = new Timer();
+                    reactTagToTimerForPolling.put(reactTag, timerForPolling);
+
+                    TimerTask pausePlayerAtEndTime = new TimerTask() {
+
+                        @Override
+                        public void run() {
+                            float currentTimeInSec = youTubeView.getCurrentTime();
+                            if (currentTimeInSec >= endTimeInSec) {
+                                youTubeView.pause();
+                                timerForPolling.cancel();
+                                reactTagToTimerForPolling.remove(reactTag);
+                                promise.resolve(null);
+                            }
+                        }
+                    };
+                    timerForPolling.scheduleAtFixedRate(pausePlayerAtEndTime, 0, (long) (periodInSec * 1000));
+                    youTubeView.play();
+                }
+            });
+        } catch (IllegalViewOperationException e) {
+            promise.reject(E_MODULE_ERROR, e);
+        }
+    }
+
+    @ReactMethod
+    public void cancelPlayAndPauseAt(final int reactTag) {
+        UIManagerModule uiManager = mReactContext.getNativeModule(UIManagerModule.class);
+        uiManager.addUIBlock(new UIBlock() {
+            public void execute (NativeViewHierarchyManager nvhm) {
+                YouTubeView youTubeView = (YouTubeView) nvhm.resolveView(reactTag);
+
+                Timer timerForPolling = reactTagToTimerForPolling.get(reactTag);
+                if (timerForPolling != null) {
+                    timerForPolling.cancel();
+                    reactTagToTimerForPolling.remove(reactTag);
+                }
                 youTubeView.pause();
             }
         });

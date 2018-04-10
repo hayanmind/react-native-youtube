@@ -12,12 +12,33 @@ RCT_EXPORT_MODULE();
 
 @synthesize bridge = _bridge;
 
+NSMutableDictionary<NSNumber *, NSTimer *> *reactTagToTimerForPolling;
+NSMutableDictionary<NSNumber *, id> *reactTagToEndTimeReachedObserver;
+
 - (UIView *)view {
     return [[RCTYouTube alloc] initWithBridge:self.bridge];
 }
 
 - (dispatch_queue_t)methodQueue {
     return _bridge.uiManager.methodQueue;
+}
+
+- (void) checkCurrentTime:(NSTimer *)timer {
+    NSDictionary *data = (NSDictionary*)[timer userInfo];
+
+    RCTYouTube *youtube = (RCTYouTube*)data[@"youtube"];
+    NSNumber *endTimeInSec = (NSNumber*)data[@"endTimeInSec"];
+    NSString *observerName = (NSString*)data[@"observerName"];
+    NSNumber *reactTag = (NSNumber*)data[@"reactTag"];
+    
+    NSNumber *currentTimeInSec = [NSNumber numberWithFloat:[youtube currentTime]];
+    if (currentTimeInSec) {
+        if ([currentTimeInSec doubleValue] >= [endTimeInSec doubleValue]) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:observerName object:nil];
+            [timer invalidate];
+            [reactTagToTimerForPolling removeObjectForKey:reactTag];
+        }
+    }
 }
 
 RCT_EXPORT_VIEW_PROPERTY(playerParams, NSDictionary);
@@ -33,6 +54,82 @@ RCT_EXPORT_VIEW_PROPERTY(onChangeState, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onChangeQuality, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onChangeFullscreen, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onProgress, RCTDirectEventBlock);
+
+RCT_EXPORT_METHOD(playAndPauseAt:(nonnull NSNumber *)reactTag
+                  endTimeInSec:(nonnull NSNumber *)endTimeInSec
+                  periodInSec:(nonnull NSNumber *)periodInSec
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, UIView *> *viewRegistry) {
+        RCTYouTube *youtube = (RCTYouTube*)viewRegistry[reactTag];
+        if ([youtube isKindOfClass:[RCTYouTube class]]) {
+            NSNotificationCenter * __weak center = [NSNotificationCenter defaultCenter];
+            NSString *observerName = [NSString stringWithFormat:@"endTimeReachedObserverFor%d", [reactTag intValue]];
+            id __block endTimeReachedObserver = [center addObserverForName:observerName
+                                                            object:nil
+                                                             queue:nil
+                                                        usingBlock:^(NSNotification *note){
+                                                            [youtube pauseVideo];
+                                                            [center removeObserver:endTimeReachedObserver];
+                                                            [reactTagToEndTimeReachedObserver removeObjectForKey:reactTag];
+                                                            resolve(nil);
+                                                        }];
+            if(reactTagToEndTimeReachedObserver == nil) {
+                reactTagToEndTimeReachedObserver = [NSMutableDictionary dictionary];
+            }
+            reactTagToEndTimeReachedObserver[reactTag] = endTimeReachedObserver;
+
+            NSDictionary *data = @{
+                                   @"youtube": youtube,
+                                   @"endTimeInSec": endTimeInSec,
+                                   @"observerName": observerName,
+                                   @"reactTag": reactTag
+                                   };
+            
+            NSTimer *timerForPolling = [NSTimer scheduledTimerWithTimeInterval:[periodInSec doubleValue]
+                                             target:self
+                                           selector:@selector(checkCurrentTime:)
+                                           userInfo:data
+                                            repeats:YES];
+            
+            if(reactTagToTimerForPolling == nil) {
+                reactTagToTimerForPolling = [NSMutableDictionary dictionary];
+            }
+            reactTagToTimerForPolling[reactTag] = timerForPolling;
+            
+            [youtube playVideo];
+        } else {
+            RCTLogError(@"Cannot playAndPauseAt: %@ (tag #%@) is not RCTYouTube", youtube, reactTag);
+            NSError *error = nil;
+            reject(@"Error playAndPauseAt of video from RCTYouTube", @"", error);
+        }
+    }];
+}
+
+RCT_EXPORT_METHOD(cancelPlayAndPauseAt:(nonnull NSNumber *)reactTag)
+{
+    [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, UIView *> *viewRegistry) {
+        RCTYouTube *youtube = (RCTYouTube*)viewRegistry[reactTag];
+        if ([youtube isKindOfClass:[RCTYouTube class]]) {
+            id endTimeReachedObserver = reactTagToEndTimeReachedObserver[reactTag];
+            if (endTimeReachedObserver) {
+                [[NSNotificationCenter defaultCenter] removeObserver:endTimeReachedObserver];
+                [reactTagToEndTimeReachedObserver removeObjectForKey:reactTag];
+            }
+            
+            NSTimer *timerForPolling = reactTagToTimerForPolling[reactTag];
+            if (timerForPolling) {
+                [timerForPolling invalidate];
+                [reactTagToTimerForPolling removeObjectForKey:reactTag];
+            }
+            
+            [youtube pauseVideo];
+        } else {
+            RCTLogError(@"Cannot cancelPlayAndPauseAt: %@ (tag #%@) is not RCTYouTube", youtube, reactTag);
+        }
+    }];
+}
 
 RCT_EXPORT_METHOD(play:(nonnull NSNumber *)reactTag)
 {
